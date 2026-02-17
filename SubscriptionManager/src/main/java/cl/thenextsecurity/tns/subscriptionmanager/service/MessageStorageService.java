@@ -43,6 +43,6 @@ public class MessageStorageService {
         MqttMessage guardado = mqttMessageRepository.save(mensaje);
         log.debug("Mensaje guardado — topic: {}, clientId: {}", topic, clientId);
 
-        sseService.sendMessage(guardado);
+        sseService.sendMessageJson(guardado);
     }
 }
