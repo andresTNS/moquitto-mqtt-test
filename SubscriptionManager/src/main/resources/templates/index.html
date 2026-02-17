@@ -137,7 +137,7 @@
             // No hay suscripciones activas. Selecciona topics y guarda tu seleccion.
         </div>
         <div class="subscriptions-list" th:unless="${#lists.isEmpty(subscriptions)}">
-            <span class="sub-tag" th:each="sub : ${subscriptions}" th:text="${sub.topic}">
+            <span class="sub-tag" th:each="sub : ${subscriptions}" th:text="${sub.topicName}">
                 sensor/temperature
             </span>
         </div>
