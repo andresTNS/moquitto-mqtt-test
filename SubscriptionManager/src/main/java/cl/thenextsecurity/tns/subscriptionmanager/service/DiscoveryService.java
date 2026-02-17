@@ -27,6 +27,9 @@ public class DiscoveryService {
     @Value("${mqtt.discovery.enabled:true}")
     private boolean discoveryEnabled;
 
+    @Value("${mqtt.discovery.interval:300000}")
+    private long discoveryIntervalMs;
+
     @Value("${mqtt.discovery.duration:30000}")
     private long discoveryDurationMs;
 
@@ -45,6 +48,30 @@ public class DiscoveryService {
     @Lazy
     public void setMqttService(MqttService mqttService) {
         this.mqttService = mqttService;
+    }
+
+    public boolean isDiscoveryEnabled() {
+        return discoveryEnabled;
+    }
+
+    public long getDiscoveryIntervalMs() {
+        return discoveryIntervalMs;
+    }
+
+    public long getDiscoveryDurationMs() {
+        return discoveryDurationMs;
+    }
+
+    /**
+     * Actualiza la configuración de descubrimiento en tiempo de ejecución.
+     * Llamado desde DiscoveryController al guardar cambios en el formulario.
+     * Nota: el cambio de intervalo aplica al campo interno pero el @Scheduled
+     * usa el valor inicial de properties; un reinicio lo sincroniza completamente.
+     */
+    public void updateConfig(boolean enabled, long intervalMs, long durationMs) {
+        this.discoveryEnabled = enabled;
+        this.discoveryIntervalMs = intervalMs;
+        this.discoveryDurationMs = durationMs;
     }
 
     /**

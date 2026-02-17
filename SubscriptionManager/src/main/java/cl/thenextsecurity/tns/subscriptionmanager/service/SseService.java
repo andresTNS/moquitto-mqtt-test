@@ -1,13 +1,17 @@
 package cl.thenextsecurity.tns.subscriptionmanager.service;
 
 import cl.thenextsecurity.tns.subscriptionmanager.entity.MqttMessage;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 @Service
@@ -15,6 +19,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class SseService {
 
     private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * Registra un nuevo cliente SSE y configura su limpieza automática
@@ -41,6 +46,26 @@ public class SseService {
                 message.getClientId(),
                 message.getPayload());
         broadcast("message", contenido);
+    }
+
+    /**
+     * Envía un mensaje MQTT en formato JSON a todos los clientes SSE conectados.
+     * Estructura esperada por dashboard.js:
+     * { "topic": "...", "clientId": "...", "payload": "...", "timestamp": "..." }
+     */
+    public void sendMessageJson(MqttMessage message) {
+        Map<String, Object> datos = new LinkedHashMap<>();
+        datos.put("topic", message.getTopic());
+        datos.put("clientId", message.getClientId());
+        datos.put("payload", message.getPayload());
+        datos.put("timestamp", message.getReceivedAt() != null ? message.getReceivedAt().toString() : "");
+
+        try {
+            String json = objectMapper.writeValueAsString(datos);
+            broadcast("message", json);
+        } catch (JsonProcessingException e) {
+            log.error("Error al serializar mensaje MQTT a JSON para SSE", e);
+        }
     }
 
     /**
