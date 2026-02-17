@@ -99,6 +99,14 @@ public class MqttService implements MqttCallback {
     }
 
     /**
+     * Indica si el cliente MQTT está actualmente conectado al broker.
+     * Usado por HomeController para el indicador de estado en la vista.
+     */
+    public boolean isConnected() {
+        return client != null && client.isConnected();
+    }
+
+    /**
      * Desuscribe al cliente de un topic específico.
      * Usado por DiscoveryService al finalizar el escaneo.
      */
