@@ -41,3 +41,6 @@ testeo.txt
 
 ### Documentación local (no subir a git) ###
 docs/
+
+### Paho MQTT — carpetas de persistencia autogeneradas ###
+SubscriptionManager/spring-mqtt-monitor*/
