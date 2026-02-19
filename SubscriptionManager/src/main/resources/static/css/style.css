@@ -203,6 +203,11 @@ body::after {
   color: var(--neon-green);
 }
 
+.status-bar .status-text.disconnected {
+  color: var(--neon-red);
+  text-shadow: 0 0 8px rgba(255, 23, 68, 0.2);
+}
+
 /* --- Section (Cyberpunk Card) --- */
 .section {
   position: relative;
@@ -275,6 +280,7 @@ body::after {
   align-items: center;
   justify-content: center;
   padding: 10px 24px;
+  min-height: 44px;
   font-family: var(--font-heading);
   font-size: 0.6875rem;
   font-weight: 700;
@@ -334,13 +340,15 @@ body::after {
 .form-group input[type="text"],
 .form-group input[type="datetime-local"] {
   padding: 8px 12px;
+  min-height: 44px;
   border: 1px solid var(--border-color);
   background-color: var(--bg-surface-2);
   font-family: var(--font-mono);
   font-size: 0.75rem;
   color: var(--text-primary);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  width: 180px;
+  width: 100%;
+  max-width: 200px;
 }
 
 .form-group input:focus {
@@ -401,6 +409,8 @@ body::after {
 .table-wrapper {
   overflow-x: auto;
   padding: 0 20px 20px;
+  position: relative;
+  overscroll-behavior-x: contain;
 }
 
 table {
@@ -742,7 +752,40 @@ td pre.payload-cell {
   animation: neonPulse 2s ease-in-out infinite;
 }
 
-/* --- Responsive --- */
+/* --- Result Count (Historial) --- */
+.result-count {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  margin-left: auto;
+}
+
+/* --- Responsive Tablet (max 900px) --- */
+@media (max-width: 900px) {
+  /* Discovery config: 2 columnas en tablet */
+  .discovery-config {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  /* Filter form del historial: 2 columnas en tablet */
+  .filter-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: end;
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .filter-form .filter-field input {
+    width: 100%;
+  }
+}
+
+/* --- Responsive Mobile (max 768px) --- */
 @media (max-width: 768px) {
   .container { padding: 0 12px; }
 
@@ -788,4 +831,44 @@ td pre.payload-cell {
   .subscriptions-list { padding: 16px; }
 
   .footer { flex-direction: column; gap: 8px; text-align: center; }
+
+  /* Status bar: permite wrap en móvil */
+  .status-bar { flex-wrap: wrap; gap: 8px; }
+
+  /* Discovery config y filter colapsan a 1 columna en móvil */
+  .discovery-config { grid-template-columns: 1fr; }
+  .filter-form { grid-template-columns: 1fr; padding: 16px; }
+
+  /* Gradiente fade derecho como indicador visual de scroll horizontal en tablas */
+  .table-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 20px;
+    bottom: 20px;
+    width: 32px;
+    background: linear-gradient(to right, transparent, var(--bg-card));
+    pointer-events: none;
+  }
+}
+
+/* --- Responsive Small Phone (max 480px) --- */
+@media (max-width: 480px) {
+  /* Nav más compacto en teléfonos muy pequeños */
+  .nav { flex-wrap: wrap; justify-content: center; }
+  .nav a { font-size: 0.5rem; padding: 6px 10px; }
+
+  /* Log de mensajes menos alto */
+  .message-log { max-height: 320px; }
+
+  /* Ocultar columnas secundarias de la tabla de topics:
+     col 3 = "Ultimo Cliente", col 4 = "Ultima vez visto" */
+  .topics-table thead th:nth-child(3),
+  .topics-table tbody td:nth-child(3),
+  .topics-table thead th:nth-child(4),
+  .topics-table tbody td:nth-child(4) { display: none; }
+
+  /* Ocultar "Client ID" en la tabla del historial */
+  .messages-table thead th:nth-child(3),
+  .messages-table tbody td:nth-child(3) { display: none; }
 }
