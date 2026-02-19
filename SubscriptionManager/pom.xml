@@ -102,6 +102,12 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- En Spring Boot 4.0.2 @WebMvcTest se movió a este artefacto dedicado -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
         <!-- H2 en memoria para @DataJpaTest sin requerir MySQL en el entorno de CI -->
         <dependency>
             <groupId>com.h2database</groupId>
