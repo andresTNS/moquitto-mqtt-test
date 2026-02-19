@@ -44,3 +44,6 @@ docs/
 
 ### Paho MQTT — carpetas de persistencia autogeneradas ###
 SubscriptionManager/spring-mqtt-monitor*/
+
+### Certificados y claves privadas (AWS IoT Core) ###
+SubscriptionManager/claves_y_llaves/

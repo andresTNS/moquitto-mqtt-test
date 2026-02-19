@@ -16,10 +16,15 @@ spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
 spring.jpa.properties.hibernate.format_sql=true
 
 # MQTT Broker
-mqtt.broker.url=tcp://localhost:1883
+mqtt.broker.url=ssl://TU_ENDPOINT_AWS.iot.TU_REGION.amazonaws.com:8883
 mqtt.client.id=spring-mqtt-monitor
 
 # MQTT Discovery
 mqtt.discovery.enabled=true
 mqtt.discovery.interval=300000
 mqtt.discovery.duration=30000
+
+# MQTT TLS — Certificados AWS IoT Core
+mqtt.tls.ca=claves_y_llaves/AmazonRootCA1.pem
+mqtt.tls.cert=claves_y_llaves/TU_CERTIFICADO-certificate.pem.crt
+mqtt.tls.key=claves_y_llaves/TU_CERTIFICADO-private.pem.key

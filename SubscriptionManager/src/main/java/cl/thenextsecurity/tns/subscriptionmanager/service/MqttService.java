@@ -1,8 +1,7 @@
 package cl.thenextsecurity.tns.subscriptionmanager.service;
 
+import cl.thenextsecurity.tns.subscriptionmanager.config.AwsIotSslConfig;
 import cl.thenextsecurity.tns.subscriptionmanager.repository.SubscriptionRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -32,16 +31,19 @@ public class MqttService implements MqttCallback {
     private final DiscoveryService discoveryService;
     private final MessageStorageService messageStorageService;
     private final SubscriptionRepository subscriptionRepository;
+    private final AwsIotSslConfig awsIotSslConfig;
     private final ObjectMapper objectMapper;
 
     private MqttClient client;
 
     public MqttService(DiscoveryService discoveryService,
                        MessageStorageService messageStorageService,
-                       SubscriptionRepository subscriptionRepository) {
+                       SubscriptionRepository subscriptionRepository,
+                       AwsIotSslConfig awsIotSslConfig) {
         this.discoveryService = discoveryService;
         this.messageStorageService = messageStorageService;
         this.subscriptionRepository = subscriptionRepository;
+        this.awsIotSslConfig = awsIotSslConfig;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -60,6 +62,7 @@ public class MqttService implements MqttCallback {
             options.setAutomaticReconnect(true);
             options.setConnectionTimeout(10);
             options.setKeepAliveInterval(60);
+            options.setSocketFactory(awsIotSslConfig.getSslSocketFactory());
 
             client.connect(options);
             log.info("Conectado al broker MQTT: {}", brokerUrl);
@@ -67,6 +70,8 @@ public class MqttService implements MqttCallback {
             reloadSubscriptions();
         } catch (MqttException e) {
             log.error("Error al conectar con el broker MQTT: {}", brokerUrl, e);
+        } catch (Exception e) {
+            log.error("Error al configurar TLS para AWS IoT Core: {}", e.getMessage(), e);
         }
     }
 
@@ -122,7 +127,7 @@ public class MqttService implements MqttCallback {
     @Override
     public void messageArrived(String topic, MqttMessage message) {
         String payload = new String(message.getPayload());
-        String clientId = extractClientId(payload);
+        String clientId = extractClientIdFromTopic(topic);
 
         if (discoveryService.isScanning()) {
             // Modo descubrimiento: registrar topic, descartar mensaje
@@ -146,18 +151,14 @@ public class MqttService implements MqttCallback {
     }
 
     /**
-     * Extrae el campo client_id del payload JSON.
-     * Retorna "unknown" si el payload no es JSON válido o no contiene el campo.
+     * Extrae el identificador del cliente desde el topic MQTT.
+     * Para dispositivos Teltonika el topic tiene formato "{IMEI}/data",
+     * por lo que el primer segmento es el IMEI del dispositivo.
+     * Retorna "unknown" si el topic no contiene el separador "/".
      */
-    private String extractClientId(String payload) {
-        try {
-            JsonNode node = objectMapper.readTree(payload);
-            JsonNode clientIdNode = node.get("client_id");
-            if (clientIdNode != null && !clientIdNode.isNull()) {
-                return clientIdNode.asText();
-            }
-        } catch (JsonProcessingException e) {
-            log.debug("Payload no es JSON válido, usando clientId 'unknown'");
+    private String extractClientIdFromTopic(String topic) {
+        if (topic != null && topic.contains("/")) {
+            return topic.split("/")[0];
         }
         return "unknown";
     }

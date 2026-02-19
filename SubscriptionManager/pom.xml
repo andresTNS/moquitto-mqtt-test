@@ -29,6 +29,8 @@
 
     <properties>
         <java.version>25</java.version>
+        <!-- CVE-2026-24400: XXE en AssertJ XmlStringPrettyFormatter. Fix en 3.27.7+ -->
+        <assertj.version>3.27.7</assertj.version>
     </properties>
 
     <dependencies>
@@ -71,6 +73,13 @@
             <groupId>org.eclipse.paho</groupId>
             <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
             <version>1.2.5</version>
+        </dependency>
+
+        <!-- === SSL/TLS — Lectura nativa de certificados PEM (AWS IoT Core) === -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk18on</artifactId>
+            <version>1.80</version>
         </dependency>
 
         <!-- === UTILIDADES === -->
