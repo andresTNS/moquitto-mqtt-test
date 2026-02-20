@@ -162,6 +162,7 @@ public class DiscoveryService {
                         DetectedTopic nuevo = DetectedTopic.builder()
                                 .topicName(topic)
                                 .lastClientId(clientId)
+                                .messageCount(1L)
                                 .build();
                         detectedTopicRepository.save(nuevo);
                     }
