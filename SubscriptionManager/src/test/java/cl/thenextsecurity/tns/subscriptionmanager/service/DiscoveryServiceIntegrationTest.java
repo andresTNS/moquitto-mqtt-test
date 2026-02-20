@@ -7,7 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -106,7 +106,7 @@ class DiscoveryServiceIntegrationTest {
 
         assertThat(guardado.getTopicName()).isEqualTo("sensor/temperatura");
         assertThat(guardado.getLastClientId()).isEqualTo("esp32-sala-01");
-        assertThat(guardado.isActive()).isTrue();
+        assertThat(guardado.getActive()).isTrue();
         assertThat(guardado.getMessageCount()).isEqualTo(1);
     }
 
@@ -117,7 +117,7 @@ class DiscoveryServiceIntegrationTest {
         DetectedTopic existente = DetectedTopic.builder()
                 .topicName("sensor/temperatura")
                 .lastClientId("esp32-old")
-                .messageCount(5)
+                .messageCount(5L)
                 .lastSeen(LocalDateTime.now().minusDays(1))
                 .build();
         detectedTopicRepository.save(existente);
@@ -133,7 +133,7 @@ class DiscoveryServiceIntegrationTest {
         assertThat(actualizado.getLastClientId()).isEqualTo("esp32-new");
         assertThat(actualizado.getMessageCount()).isEqualTo(6);
         assertThat(actualizado.getLastSeen()).isAfter(existente.getLastSeen());
-        assertThat(actualizado.isActive()).isTrue();
+        assertThat(actualizado.getActive()).isTrue();
     }
 
     @Test
@@ -155,7 +155,7 @@ class DiscoveryServiceIntegrationTest {
         DetectedTopic ausenteActualizado = detectedTopicRepository.findByTopicName("sensor/old")
                 .orElseThrow();
 
-        assertThat(ausenteActualizado.isActive()).isFalse();
+        assertThat(ausenteActualizado.getActive()).isFalse();
     }
 
     // =========================================================================
