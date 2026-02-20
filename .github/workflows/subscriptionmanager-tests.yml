@@ -1,0 +1,285 @@
+# =============================================================================
+# SubscriptionManager — Workflow de CI
+# =============================================================================
+# Propósito:    Compilar, ejecutar tests unitarios y generar reporte JaCoCo.
+# Proyecto:     SubscriptionManager (Spring Boot 4.0.2 · Java 25 · Maven 3.9.12)
+#
+# Monorepo:     Solo se activa con cambios en SubscriptionManager/ o este archivo.
+#               Cambios en SQL_FILES/ u otros proyectos NO activan este workflow.
+#               Cada proyecto del repositorio tiene su propio workflow independiente.
+#
+# Jobs activos:    unit-tests — siempre en CI, estimado 2-4 minutos
+# Jobs comentados: integration-tests — requiere AWS IoT Core + MySQL reales
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# Secrets necesarios para habilitar integration-tests (actualmente comentado):
+#
+#   MQTT_BROKER_URL  → ssl://ENDPOINT.iot.REGION.amazonaws.com:8883
+#   MYSQL_URL        → jdbc:mysql://HOST:3306/mqtt_monitor
+#   MYSQL_USERNAME   → usuario de base de datos MySQL
+#   MYSQL_PASSWORD   → contraseña de base de datos MySQL
+#   AWS_IOT_CA       → contenido completo de AmazonRootCA1.pem
+#   AWS_IOT_CERT     → contenido completo del certificado del dispositivo (.crt)
+#   AWS_IOT_KEY      → contenido completo de la clave privada RSA (.key)
+#
+# Configurar en: GitHub → Settings → Secrets and variables → Actions
+# =============================================================================
+
+name: SubscriptionManager CI
+
+on:
+  push:
+    branches:
+      - master
+      - main
+      - 'test/**'
+      - 'feature/**'
+      - 'chore/**'
+    # Monorepo: solo si hay cambios en SubscriptionManager/ o en este workflow.
+    # Cambios exclusivos en SQL_FILES/ u otros proyectos no activan este workflow.
+    paths:
+      - 'SubscriptionManager/**'
+      - '.github/workflows/subscriptionmanager-tests.yml'
+  pull_request:
+    branches:
+      - master
+      - main
+    paths:
+      - 'SubscriptionManager/**'
+      - '.github/workflows/subscriptionmanager-tests.yml'
+  workflow_dispatch:
+
+# Cancelar runs anteriores en la misma rama para no consumir minutos de CI
+# innecesariamente. En master/main no se cancela para no interrumpir builds activos.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' }}
+
+# Permisos mínimos: solo lectura del código + escritura en checks y comentarios de PR.
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+# Directorio de trabajo por defecto: todos los comandos se ejecutan
+# dentro de SubscriptionManager/ sin necesidad de cd ni prefijos en cada step.
+defaults:
+  run:
+    working-directory: SubscriptionManager
+
+jobs:
+  # ===========================================================================
+  # JOB: unit-tests
+  # Compila el proyecto, ejecuta tests unitarios y genera reporte de cobertura.
+  # Los tests de integración (@Tag("integration")) están excluidos porque
+  # requieren AWS IoT Core y MySQL reales que no están disponibles en CI.
+  # ===========================================================================
+  unit-tests:
+    name: Unit Tests & Coverage
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      # -----------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------------
+      # Configura Java 25 con Temurin y activa el caché de dependencias Maven.
+      # El caché evita descargar las dependencias en cada build — acelera
+      # builds subsecuentes de ~3 min a ~30 segundos en descarga de deps.
+      # cache-dependency-path: limita el hash del caché a este proyecto
+      # específico, independientemente de otros proyectos del repositorio.
+      # -----------------------------------------------------------------------
+      - name: Set up Java 25 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'maven'
+          cache-dependency-path: 'SubscriptionManager/pom.xml'
+
+      # -----------------------------------------------------------------------
+      # Crea application.properties con valores dummy para CI.
+      # Los tests unitarios (@WebMvcTest, @ExtendWith(MockitoExtension)) no
+      # necesitan conexión real, pero Spring Boot requiere que las propiedades
+      # existan para poder inicializar su contexto parcial.
+      # Este archivo se crea solo en el workspace efímero de CI — nunca se
+      # commitea al repositorio (está en .gitignore: **/application.properties).
+      # -----------------------------------------------------------------------
+      - name: Create CI application.properties
+        run: |
+          mkdir -p src/test/resources
+          cat > src/test/resources/application.properties << 'EOF'
+          spring.application.name=SubscriptionManager-CI
+          # H2 en memoria: reemplaza MySQL para tests que necesiten JPA
+          spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL
+          spring.datasource.driver-class-name=org.h2.Driver
+          spring.datasource.username=sa
+          spring.datasource.password=
+          spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
+          spring.jpa.hibernate.ddl-auto=create-drop
+          spring.jpa.show-sql=false
+          # MQTT: valores dummy (sin conexión real, discovery deshabilitado)
+          mqtt.broker.url=ssl://ci-dummy.iot.us-east-1.amazonaws.com:8883
+          mqtt.client.id=ci-test-client
+          mqtt.discovery.enabled=false
+          mqtt.discovery.interval=300000
+          mqtt.discovery.duration=30000
+          mqtt.tls.ca=/dev/null
+          mqtt.tls.cert=/dev/null
+          mqtt.tls.key=/dev/null
+          EOF
+
+      # -----------------------------------------------------------------------
+      - name: Compile project
+        run: ./mvnw -B compile -DskipTests
+
+      # -----------------------------------------------------------------------
+      # Excluye los 3 tests con @Tag("integration") que requieren servicios reales:
+      #   - MqttServiceIntegrationTest  → necesita AWS IoT Core
+      #   - MqttServiceEndToEndTest     → necesita AWS IoT Core + MySQL
+      #   - AwsIotSslConfigSpringTest   → necesita certificados PEM reales
+      # El pom.xml ya excluye SubscriptionManagerApplicationTests (suite runner)
+      # para evitar doble ejecución. Ambos mecanismos son complementarios.
+      # -----------------------------------------------------------------------
+      - name: Run unit tests
+        id: unit-tests
+        run: |
+          ./mvnw -B test \
+            -Dgroups='!integration' \
+            -Dsurefire.failIfNoSpecifiedTests=false
+
+      # -----------------------------------------------------------------------
+      - name: Build JAR
+        run: ./mvnw -B package -DskipTests
+
+      # -----------------------------------------------------------------------
+      # El reporte HTML de JaCoCo se genera en target/site/jacoco/
+      # Siempre se sube (if: always()) para poder ver la cobertura incluso
+      # cuando los tests fallan — ayuda a entender qué código no se probó.
+      # -----------------------------------------------------------------------
+      - name: Upload JaCoCo coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jacoco-coverage-report
+          path: SubscriptionManager/target/site/jacoco/
+          retention-days: 30
+
+      # -----------------------------------------------------------------------
+      # Solo sube Surefire reports si los tests fallaron.
+      # Contiene el detalle XML de cada test fallido para facilitar el debug.
+      # -----------------------------------------------------------------------
+      - name: Upload Surefire reports on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: surefire-failure-reports
+          path: SubscriptionManager/target/surefire-reports/
+          retention-days: 7
+
+      # -----------------------------------------------------------------------
+      # Comentario persistente en el PR con el resumen del CI.
+      # marocchino/sticky-pull-request-comment actualiza el mismo comentario
+      # en cada push (no crea uno nuevo), evitando spam en el hilo del PR.
+      # -----------------------------------------------------------------------
+      - name: Comment PR with CI summary
+        uses: marocchino/sticky-pull-request-comment@v2
+        if: always() && github.event_name == 'pull_request'
+        with:
+          header: subscription-manager-ci
+          message: |
+            ## SubscriptionManager CI — Resultados
+
+            | Check | Estado |
+            |-------|--------|
+            | Compilación | ${{ steps.unit-tests.outcome != 'skipped' && '✅ OK' || '⏭️ Omitido' }} |
+            | Tests unitarios | ${{ steps.unit-tests.outcome == 'success' && '✅ Pasaron' || steps.unit-tests.outcome == 'failure' && '❌ Fallaron' || '⏭️ Omitido' }} |
+            | JAR generado | ${{ job.status == 'success' && '✅ OK' || '❌ Error' }} |
+            | Reporte JaCoCo | [Ver artifact](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) |
+
+            > **Rama:** `${{ github.head_ref }}` &nbsp;·&nbsp; **Commit:** `${{ github.sha }}`
+            >
+            > *Tests de integración omitidos — requieren AWS IoT Core + MySQL real*
+
+  # ===========================================================================
+  # JOB: integration-tests — DESHABILITADO
+  # ===========================================================================
+  # Para habilitar este job:
+  #   1. Configurar los 7 secrets listados en el header de este archivo
+  #      (GitHub → Settings → Secrets and variables → Actions)
+  #   2. Descomentar todo el bloque a continuación
+  #   3. Se recomienda usar solo con workflow_dispatch (ejecución manual)
+  #      para evitar costos inesperados de AWS en cada push
+  #
+  # TIEMPO ESTIMADO: 15-20 minutos
+  # Los tests MqttServiceEndToEndTest y MqttServiceIntegrationTest esperan
+  # mensajes reales del dispositivo FMC920 (timeout de hasta 5 minutos cada uno).
+  # ===========================================================================
+  # integration-tests:
+  #   name: Integration Tests (AWS IoT Core + MySQL)
+  #   runs-on: ubuntu-24.04
+  #   timeout-minutes: 30
+  #   needs: unit-tests
+  #   # Solo ejecutar manualmente para evitar costos inesperados de AWS
+  #   if: github.event_name == 'workflow_dispatch'
+  #
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Set up Java 25 (Temurin)
+  #       uses: actions/setup-java@v4
+  #       with:
+  #         java-version: '25'
+  #         distribution: 'temurin'
+  #         cache: 'maven'
+  #         cache-dependency-path: 'SubscriptionManager/pom.xml'
+  #
+  #     # Reconstruir certificados PEM desde secrets.
+  #     # Los secrets almacenan el texto completo de cada archivo PEM,
+  #     # incluyendo las cabeceras BEGIN CERTIFICATE / BEGIN RSA PRIVATE KEY.
+  #     - name: Restore AWS IoT Core certificates from secrets
+  #       run: |
+  #         mkdir -p claves_y_llaves
+  #         printf '%s' "${{ secrets.AWS_IOT_CA }}"   > claves_y_llaves/AmazonRootCA1.pem
+  #         printf '%s' "${{ secrets.AWS_IOT_CERT }}" > claves_y_llaves/device-certificate.pem.crt
+  #         printf '%s' "${{ secrets.AWS_IOT_KEY }}"  > claves_y_llaves/device-private.pem.key
+  #
+  #     - name: Create application.properties with real credentials
+  #       run: |
+  #         mkdir -p src/test/resources
+  #         cat > src/test/resources/application.properties << 'EOF'
+  #         spring.application.name=SubscriptionManager-CI-Integration
+  #         spring.datasource.url=${{ secrets.MYSQL_URL }}
+  #         spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+  #         spring.datasource.username=${{ secrets.MYSQL_USERNAME }}
+  #         spring.datasource.password=${{ secrets.MYSQL_PASSWORD }}
+  #         spring.jpa.hibernate.ddl-auto=update
+  #         spring.jpa.show-sql=false
+  #         spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
+  #         mqtt.broker.url=${{ secrets.MQTT_BROKER_URL }}
+  #         # client.id único por run: evita conflictos si hay otra instancia conectada
+  #         mqtt.client.id=ci-integration-${{ github.run_id }}
+  #         mqtt.discovery.enabled=false
+  #         mqtt.discovery.interval=300000
+  #         mqtt.discovery.duration=30000
+  #         mqtt.tls.ca=claves_y_llaves/AmazonRootCA1.pem
+  #         mqtt.tls.cert=claves_y_llaves/device-certificate.pem.crt
+  #         mqtt.tls.key=claves_y_llaves/device-private.pem.key
+  #         EOF
+  #
+  #     - name: Run integration tests
+  #       run: |
+  #         ./mvnw -B test \
+  #           -Dgroups='integration' \
+  #           -Dsurefire.failIfNoSpecifiedTests=false
+  #
+  #     - name: Upload integration Surefire reports
+  #       uses: actions/upload-artifact@v4
+  #       if: always()
+  #       with:
+  #         name: integration-surefire-reports
+  #         path: SubscriptionManager/target/surefire-reports/
+  #         retention-days: 14
