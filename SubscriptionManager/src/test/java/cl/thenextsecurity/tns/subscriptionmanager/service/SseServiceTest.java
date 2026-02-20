@@ -71,14 +71,21 @@ class SseServiceTest {
     void addEmitter_callbackOnCompletion_eliminaEmitterDeLaLista() {
         SseEmitter emitter = sseService.addEmitter();
 
-        // Trigger onCompletion callback manualmente
-        emitter.complete();
+        // En Spring Boot 4.x / Spring 6.x, SseEmitter.complete() sin handler HTTP
+        // no invoca onCompletion porque ResponseBodyEmitter.handler es null en contexto
+        // unitario. El callback se almacena en el campo "completionCallback" y debe
+        // invocarse directamente para verificar el comportamiento de limpieza.
+        Runnable completionCallback = (Runnable) ReflectionTestUtils.getField(
+                emitter, "completionCallback");
+        assertThat(completionCallback)
+                .as("El callback onCompletion debe estar configurado en el emitter")
+                .isNotNull();
+        completionCallback.run();
 
         @SuppressWarnings("unchecked")
         List<SseEmitter> emitters = (List<SseEmitter>) ReflectionTestUtils.getField(
                 sseService, "emitters");
 
-        // Después de complete(), el callback debe haberlo eliminado
         assertThat(emitters).isEmpty();
     }
 
