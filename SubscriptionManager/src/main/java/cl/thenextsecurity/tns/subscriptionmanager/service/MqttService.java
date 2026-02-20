@@ -2,7 +2,6 @@ package cl.thenextsecurity.tns.subscriptionmanager.service;
 
 import cl.thenextsecurity.tns.subscriptionmanager.config.AwsIotSslConfig;
 import cl.thenextsecurity.tns.subscriptionmanager.repository.SubscriptionRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.paho.client.mqttv3.*;
@@ -32,7 +31,6 @@ public class MqttService implements MqttCallback {
     private final MessageStorageService messageStorageService;
     private final SubscriptionRepository subscriptionRepository;
     private final AwsIotSslConfig awsIotSslConfig;
-    private final ObjectMapper objectMapper;
 
     private MqttClient client;
 
@@ -44,7 +42,6 @@ public class MqttService implements MqttCallback {
         this.messageStorageService = messageStorageService;
         this.subscriptionRepository = subscriptionRepository;
         this.awsIotSslConfig = awsIotSslConfig;
-        this.objectMapper = new ObjectMapper();
     }
 
     /**
