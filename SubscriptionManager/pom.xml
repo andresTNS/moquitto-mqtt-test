@@ -149,6 +149,49 @@
                     </excludes>
                 </configuration>
             </plugin>
+
+            <!-- === TESTS — Suite Runner ======================================
+                 Excluye SubscriptionManagerApplicationTests del descubrimiento
+                 directo de Surefire. Sin esto, los tests corren dos veces:
+                 una vez por cada clase individual y otra vez por la suite @Suite.
+                 La suite @Suite + @SelectPackages se reserva para uso en IDE.
+                 Spring Boot parent gestiona la versión de Surefire. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>**/*ApplicationTests.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+
+            <!-- === COBERTURA — JaCoCo ========================================
+                 Versión 0.8.13 explícita: garantiza compatibilidad con bytecode
+                 de Java 25 (class file version 69). Spring Boot 4.0.2 BOM puede
+                 gestionar una versión anterior incompatible.
+                 prepare-agent: instrumenta el classpath antes de la fase test.
+                 report: genera reporte HTML en target/site/jacoco/ tras los tests. -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.13</version>
+                <executions>
+                    <execution>
+                        <id>jacoco-prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>jacoco-report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 
