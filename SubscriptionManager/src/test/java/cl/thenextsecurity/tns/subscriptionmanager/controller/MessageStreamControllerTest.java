@@ -4,7 +4,7 @@ import cl.thenextsecurity.tns.subscriptionmanager.service.SseService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -39,6 +39,9 @@ class MessageStreamControllerTest {
                 .andExpect(status().isOk());
     }
 
+    // TODO: Este test falla intermitentemente con @WebMvcTest en Spring Boot 4.0.2.
+    // SseEmitter es asíncrono y el Content-Type no siempre se escribe antes de que
+    // MockMvc lea la respuesta. Revisar en rama dedicada el uso de asyncDispatch().
     @Test
     @DisplayName("GET /messages/stream retorna Content-Type text/event-stream")
     void stream_retornaContentTypeTextEventStream() throws Exception {
