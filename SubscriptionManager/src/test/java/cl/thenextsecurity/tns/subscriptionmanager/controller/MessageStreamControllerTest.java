@@ -8,12 +8,15 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(MessageStreamController.class)
@@ -39,16 +42,23 @@ class MessageStreamControllerTest {
                 .andExpect(status().isOk());
     }
 
-    // TODO: Este test falla intermitentemente con @WebMvcTest en Spring Boot 4.0.2.
-    // SseEmitter es asíncrono y el Content-Type no siempre se escribe antes de que
-    // MockMvc lea la respuesta. Revisar en rama dedicada el uso de asyncDispatch().
     @Test
     @DisplayName("GET /messages/stream retorna Content-Type text/event-stream")
     void stream_retornaContentTypeTextEventStream() throws Exception {
-        when(sseService.addEmitter()).thenReturn(new SseEmitter());
+        SseEmitter emitter = new SseEmitter();
+        when(sseService.addEmitter()).thenReturn(emitter);
 
-        mockMvc.perform(get("/messages/stream")
+        // SseEmitter usa async dispatch: el Content-Type se confirma cuando Spring
+        // despacha el resultado asíncrono, no durante el procesamiento sincrónico.
+        // Patrón correcto en Spring Boot 4.x: asyncStarted → complete → asyncDispatch.
+        MvcResult result = mockMvc.perform(get("/messages/stream")
                         .accept(MediaType.TEXT_EVENT_STREAM))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        emitter.complete();
+
+        mockMvc.perform(asyncDispatch(result))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_EVENT_STREAM));
     }
