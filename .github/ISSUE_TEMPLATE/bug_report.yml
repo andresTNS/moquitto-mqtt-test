@@ -1,0 +1,95 @@
+name: "Bug Report / Reporte de Error"
+description: "Report a bug in the project / Reportar un error en el proyecto"
+title: "[BUG] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **English:** Thank you for reporting a bug. Please fill in the details below.
+        **Español:** Gracias por reportar un error. Por favor completa los detalles a continuación.
+
+  - type: dropdown
+    id: project
+    attributes:
+      label: "Project / Proyecto"
+      description: "Which project is affected? / ¿Qué proyecto está afectado?"
+      options:
+        - SubscriptionManager
+        - SQL_FILES
+        - Other / Otro
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "Bug Description / Descripción del Error"
+      description: |
+        EN: A clear and concise description of what the bug is.
+        ES: Una descripción clara y concisa del error.
+      placeholder: |
+        EN: Describe what happened...
+        ES: Describe qué ocurrió...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: "Steps to Reproduce / Pasos para Reproducir"
+      description: |
+        EN: Step-by-step instructions to reproduce the behavior.
+        ES: Instrucciones paso a paso para reproducir el comportamiento.
+      placeholder: |
+        1. Start the application with...
+        2. Send an MQTT message to...
+        3. Observe that...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: "Expected Behavior / Comportamiento Esperado"
+      description: |
+        EN: What did you expect to happen?
+        ES: ¿Qué esperabas que ocurriera?
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: "Environment / Entorno"
+      description: |
+        EN: Please provide your environment details.
+        ES: Por favor proporciona los detalles de tu entorno.
+      value: |
+        - OS:
+        - Java version:
+        - Spring Boot version: 4.0.2
+        - AWS IoT Core region:
+        - MySQL version:
+        - Device (if applicable): Teltonika FMC920
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: "Relevant Logs / Logs Relevantes"
+      description: |
+        EN: Paste any relevant log output (remove credentials before posting).
+        ES: Pega cualquier log relevante (elimina credenciales antes de publicar).
+      render: shell
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: "Checklist"
+      options:
+        - label: "I have removed all credentials and sensitive data from this report / He eliminado todas las credenciales y datos sensibles de este reporte"
+          required: true
+        - label: "I have searched for existing issues before creating this one / Busqué issues existentes antes de crear este"
+          required: true

@@ -1,0 +1,51 @@
+# Archivos Maven/Java en cualquier subcarpeta
+**/HELP.md
+**/target/
+**/.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+**/.apt_generated
+**/.classpath
+**/.factorypath
+**/.project
+**/.settings
+**/.springBeans
+**/.sts4-cache
+
+### IntelliJ IDEA ###
+**/.idea
+**/*.iws
+**/*.iml
+**/*.ipr
+
+### NetBeans ###
+**/nbproject/private/
+**/nbbuild/
+**/dist/
+**/nbdist/
+**/.nb-gradle/
+**/build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+**/.vscode/
+
+### Configuración local (credenciales) ###
+**/application.properties
+
+SubscriptionManager/megaprompt.txt
+testeo.txt
+
+### Documentación local (no subir a git) ###
+docs/
+
+### Paho MQTT — carpetas de persistencia autogeneradas ###
+SubscriptionManager/spring-mqtt-monitor*/
+
+### Certificados y claves privadas (AWS IoT Core) ###
+SubscriptionManager/claves_y_llaves/
+
+SubscriptionManager/bin/

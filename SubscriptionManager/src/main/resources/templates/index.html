@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MQTT NEXUS // Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+
+<div class="container">
+
+    <!-- HEADER -->
+    <header class="header">
+        <h1><span>MQTT</span> NEXUS</h1>
+        <nav class="nav">
+            <a href="/" class="active">// Dashboard</a>
+            <a href="/history">// Historial</a>
+        </nav>
+    </header>
+
+    <!-- STATUS BAR -->
+    <div class="status-bar">
+        <span class="status-indicator"
+              th:classappend="${mqttConnected} ? 'connected' : 'disconnected'"></span>
+        <span class="status-text"
+              th:classappend="${mqttConnected} ? '' : 'disconnected'"
+              th:text="${mqttConnected} ? 'CONECTADO AL BROKER MQTT' : 'DESCONECTADO DEL BROKER'">
+            Estado de conexion
+        </span>
+    </div>
+
+    <!-- DISCOVERY PANEL -->
+    <div class="section">
+        <h2 class="section-title">Descubrimiento de Topics</h2>
+        <div class="discovery-panel">
+            <div class="discovery-row">
+                <p>
+                    Escanea el broker para detectar topics activos suscribiendose
+                    temporalmente al wildcard <strong>#</strong>
+                </p>
+                <form method="post" th:action="@{/discovery/scan}">
+                    <button type="submit" class="btn btn-primary">Escanear Ahora</button>
+                </form>
+            </div>
+
+            <form method="post" th:action="@{/discovery/configure}" class="discovery-config">
+                <div class="form-group">
+                    <input type="checkbox"
+                           id="discoveryEnabled"
+                           name="enabled"
+                           th:checked="${discoveryEnabled}" />
+                    <label for="discoveryEnabled">Auto-discovery</label>
+                </div>
+                <div class="form-group">
+                    <label for="interval">Intervalo:</label>
+                    <input type="number"
+                           id="interval"
+                           name="interval"
+                           th:value="${discoveryInterval}"
+                           min="10000"
+                           step="1000" />
+                </div>
+                <div class="form-group">
+                    <label for="duration">Duracion:</label>
+                    <input type="number"
+                           id="duration"
+                           name="duration"
+                           th:value="${discoveryDuration}"
+                           min="5000"
+                           step="1000" />
+                </div>
+                <button type="submit" class="btn btn-secondary">Guardar Config</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOPICS TABLE -->
+    <div class="section">
+        <h2 class="section-title">Topics Detectados</h2>
+        <form method="post" th:action="@{/subscriptions/save}">
+            <div class="table-wrapper">
+                <table class="topics-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">
+                                <input type="checkbox" id="selectAll" title="Seleccionar todos" />
+                            </th>
+                            <th>Topic</th>
+                            <th>Ultimo Cliente</th>
+                            <th>Ultima vez visto</th>
+                            <th>Estado</th>
+                            <th>Mensajes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="topic : ${detectedTopics}">
+                            <td>
+                                <input type="checkbox"
+                                       name="selectedTopics"
+                                       th:value="${topic.topicName}"
+                                       th:checked="${subscribedTopics.contains(topic.topicName)}" />
+                            </td>
+                            <td class="topic-cell" th:text="${topic.topicName}">sensor/temperature</td>
+                            <td th:text="${topic.lastClientId != null ? topic.lastClientId : 'N/A'}">client-01</td>
+                            <td th:text="${#temporals.format(topic.lastSeen, 'dd/MM/yyyy HH:mm:ss')}">01/01/2025 12:00:00</td>
+                            <td>
+                                <span class="badge"
+                                      th:classappend="${topic.active} ? 'badge-active' : 'badge-inactive'"
+                                      th:text="${topic.active} ? 'Online' : 'Offline'">
+                                    Online
+                                </span>
+                            </td>
+                            <td th:text="${topic.messageCount}">0</td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(detectedTopics)}">
+                            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 32px;">
+                                // No se han detectado topics. Ejecuta un escaneo para descubrir topics activos.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin: 16px 20px 20px; display: flex; justify-content: flex-end;">
+                <button type="submit" class="btn btn-primary">Guardar Seleccion</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- ACTIVE SUBSCRIPTIONS -->
+    <div class="section">
+        <h2 class="section-title">Suscripciones Activas</h2>
+        <div th:if="${#lists.isEmpty(subscriptions)}"
+             style="color: var(--text-muted); font-size: 0.75rem; padding: 20px; font-family: var(--font-mono);">
+            // No hay suscripciones activas. Selecciona topics y guarda tu seleccion.
+        </div>
+        <div class="subscriptions-list" th:unless="${#lists.isEmpty(subscriptions)}">
+            <span class="sub-tag" th:each="sub : ${subscriptions}" th:text="${sub.topicName}">
+                sensor/temperature
+            </span>
+        </div>
+    </div>
+
+    <!-- REAL-TIME MESSAGE LOG -->
+    <div class="section">
+        <h2 class="section-title">Mensajes en Tiempo Real</h2>
+        <div id="message-log" class="message-log" aria-live="polite" aria-label="Log de mensajes en tiempo real">
+            <div class="message-log-empty">
+                // Esperando mensajes... Los datos del stream SSE apareceran aqui.
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <span>MQTT NEXUS v2.0 // Spring Boot Backend</span>
+        <span class="sys-status">System Operational</span>
+    </footer>
+
+</div>
+
+<script th:src="@{/js/dashboard.js}"></script>
+<script>
+(function() {
+    var selectAll = document.getElementById('selectAll');
+    if (!selectAll) return;
+    selectAll.addEventListener('change', function() {
+        var checkboxes = document.querySelectorAll('input[name="selectedTopics"]');
+        for (var i = 0; i < checkboxes.length; i++) {
+            checkboxes[i].checked = selectAll.checked;
+        }
+    });
+})();
+</script>
+
+</body>
+</html>

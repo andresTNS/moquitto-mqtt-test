@@ -1,0 +1,72 @@
+name: "Feature Request / Nueva Funcionalidad"
+description: "Propose a new feature or improvement / Proponer una nueva funcionalidad o mejora"
+title: "[FEAT] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **English:** Thank you for proposing a new feature!
+        **Español:** ¡Gracias por proponer una nueva funcionalidad!
+
+  - type: dropdown
+    id: project
+    attributes:
+      label: "Project / Proyecto"
+      description: "Which project would this affect? / ¿Qué proyecto se vería afectado?"
+      options:
+        - SubscriptionManager
+        - SQL_FILES
+        - New project / Nuevo proyecto
+        - Other / Otro
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: "Problem / Problema"
+      description: |
+        EN: Is your feature request related to a problem? Describe it.
+        ES: ¿Tu solicitud está relacionada con un problema? Descríbelo.
+      placeholder: |
+        EN: I'm frustrated when...
+        ES: Me resulta difícil cuando...
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: "Proposed Solution / Solución Propuesta"
+      description: |
+        EN: Describe the solution you'd like.
+        ES: Describe la solución que te gustaría.
+    validations:
+      required: true
+
+  - type: textarea
+    id: poc_context
+    attributes:
+      label: "PoC Context / Contexto del PoC"
+      description: |
+        EN: How does this feature relate to the MQTT / AWS IoT Core / Teltonika PoC?
+        ES: ¿Cómo se relaciona esta funcionalidad con el PoC de MQTT / AWS IoT Core / Teltonika?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: "Alternatives Considered / Alternativas Consideradas"
+      description: |
+        EN: Describe any alternative solutions you've considered.
+        ES: Describe cualquier solución alternativa que hayas considerado.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: "Checklist"
+      options:
+        - label: "I have searched for existing feature requests before creating this one / Busqué solicitudes existentes antes de crear esta"
+          required: true
+        - label: "This feature aligns with the PoC goals / Esta funcionalidad está alineada con los objetivos del PoC"
+          required: true
